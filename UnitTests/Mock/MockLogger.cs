@@ -1,14 +1,17 @@
+using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Logging;
 using SPTarkov.Server.Core.Models.Spt.Logging;
 using SPTarkov.Server.Core.Models.Utils;
+using LogLevel = SPTarkov.Server.Core.Models.Spt.Logging.LogLevel;
 
 namespace UnitTests.Mock;
 
+[Injectable(TypePriority = int.MinValue)]
 public class MockLogger<T> : ISptLogger<T>
 {
     public void LogWithColor(string data, LogTextColor? textColor = null, LogBackgroundColor? backgroundColor = null, Exception? ex = null)
     {
-        throw new NotImplementedException();
+        Console.WriteLine(data);
     }
 
     public void Success(string data, Exception? ex = null)
@@ -49,12 +52,12 @@ public class MockLogger<T> : ISptLogger<T>
         Exception? ex = null
     )
     {
-        throw new NotImplementedException();
+        Console.WriteLine(data);
     }
 
     public void WriteToLogFile(string body, LogLevel level = LogLevel.Info)
     {
-        throw new NotImplementedException();
+
     }
 
     public bool IsLogEnabled(LogLevel level)
@@ -64,7 +67,7 @@ public class MockLogger<T> : ISptLogger<T>
 
     public void DumpAndStop()
     {
-        throw new NotImplementedException();
+
     }
 
     public void LogWithColor(

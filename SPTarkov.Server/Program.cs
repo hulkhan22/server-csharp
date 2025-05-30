@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using SPTarkov.Common.Semver;
 using SPTarkov.Common.Semver.Implementations;
 using SPTarkov.DI;
+using SPTarkov.Server.Core.Constants;
 using SPTarkov.Server.Core.Context;
 using SPTarkov.Server.Core.Helpers;
 using SPTarkov.Server.Core.Models.External;
@@ -15,7 +16,7 @@ using SPTarkov.Server.Modding;
 
 namespace SPTarkov.Server;
 
-public static class Program
+public partial class Program
 {
     public static void Main(string[] args)
     {
@@ -47,7 +48,10 @@ public static class Program
 
         try
         {
-            SetConsoleOutputMode();
+            if (!builder.Environment.IsEnvironment(EnvironmentNames.Testing))
+            {
+                SetConsoleOutputMode();
+            }
 
             var watermark = serviceProvider.GetService<Watermark>();
             // Initialize Watermark
