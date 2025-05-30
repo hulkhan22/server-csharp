@@ -9,6 +9,7 @@ using SPTarkov.Server.Core.Helpers;
 using SPTarkov.Server.Core.Models.External;
 using SPTarkov.Server.Core.Models.Spt.Mod;
 using SPTarkov.Server.Core.Models.Utils;
+using SPTarkov.Server.Core.Servers;
 using SPTarkov.Server.Core.Utils;
 using SPTarkov.Server.Core.Utils.Logger;
 using SPTarkov.Server.Logger;
@@ -18,7 +19,7 @@ namespace SPTarkov.Server;
 
 public partial class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         // Initialize the program variables
         ProgramStatics.Initialize();
@@ -31,7 +32,7 @@ public partial class Program
         diHandler.AddInjectableTypesFromTypeAssembly(typeof(Program));
         diHandler.AddInjectableTypesFromTypeAssembly(typeof(App));
 
-        List<SptMod> loadedMods = null;
+        List<SptMod> loadedMods = [];
         if (ProgramStatics.MODS())
         {
             // Search for mod dlls
@@ -43,6 +44,8 @@ public partial class Program
         }
         diHandler.InjectAll();
 
+        builder.Services.AddSingleton(builder);
+        builder.Services.AddSingleton<IReadOnlyList<SptMod>>(loadedMods);
         var serviceProvider = builder.Services.BuildServiceProvider();
         var logger = serviceProvider.GetService<ILoggerFactory>().CreateLogger("Server");
 
@@ -53,44 +56,18 @@ public partial class Program
                 SetConsoleOutputMode();
             }
 
-            var watermark = serviceProvider.GetService<Watermark>();
-            // Initialize Watermark
-            watermark?.Initialize();
-
-            var appContext = serviceProvider.GetService<ApplicationContext>();
-            appContext?.AddValue(ContextVariableType.SERVICE_PROVIDER, serviceProvider);
-
-            if (ProgramStatics.MODS())
-            {
-                // Initialize PreSptMods
-                var preSptLoadMods = serviceProvider.GetServices<IPreSptLoadMod>();
-                foreach (var preSptLoadMod in preSptLoadMods)
-                {
-                    preSptLoadMod.PreSptLoad();
-                }
-            }
-
-            // Add the Loaded Mod Assemblies for later
-            appContext?.AddValue(ContextVariableType.LOADED_MOD_ASSEMBLIES, loadedMods);
-
-            // This is the builder that will get use by the HttpServer to start up the web application
-            appContext?.AddValue(ContextVariableType.APP_BUILDER, builder);
-
             // Get the Built app and run it
             var app = serviceProvider.GetService<App>();
-            app?.Run().Wait();
 
-            // Run garbage collection now the server is ready to start
-            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
-
-
-            var httpServerHelper = serviceProvider.GetService<HttpServerHelper>();
-            // When the application is started by the HttpServer it will be added into the AppContext of the WebApplication
-            // object, which we can use here to start the webapp.
-            if (httpServerHelper != null)
+            if (app != null)
             {
-                appContext?.GetLatestValue(ContextVariableType.WEB_APPLICATION)?.GetValue<WebApplication>().Run();
+                await app.InitializeAsync();
+
+                // Run garbage collection now the server is ready to start
+                GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
+
+                await app.StartAsync();
             }
         }
         catch (Exception ex)
