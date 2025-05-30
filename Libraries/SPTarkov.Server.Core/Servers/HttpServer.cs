@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.Primitives;
 using SPTarkov.Common.Extensions;
 using SPTarkov.DI.Annotations;
+using SPTarkov.Server.Core.Constants;
 using SPTarkov.Server.Core.Context;
 using SPTarkov.Server.Core.Helpers;
 using SPTarkov.Server.Core.Models.Spt.Config;
@@ -26,6 +27,7 @@ public class HttpServer(
 )
 {
     private readonly HttpConfig _httpConfig = _configServer.GetConfig<HttpConfig>();
+    private IWebHostEnvironment _environment;
     private bool _started;
 
     /// <summary>
@@ -40,16 +42,21 @@ public class HttpServer(
             throw new Exception("WebApplicationBuilder is null in HttpServer.Load()");
         }
 
+        _environment = builder.Environment;
+
         builder.WebHost.ConfigureKestrel(options =>
         {
             options.Listen(IPAddress.Parse(_httpConfig.Ip), _httpConfig.Port, listenOptions =>
             {
-                listenOptions.UseHttps(opts =>
+                if (!_environment.IsEnvironment(EnvironmentNames.Testing))
                 {
-                    opts.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
-                    opts.ServerCertificate = _certificateHelper.LoadOrGenerateCertificatePfx();
-                    opts.ClientCertificateMode = ClientCertificateMode.NoCertificate;
-                });
+                    listenOptions.UseHttps(opts =>
+                    {
+                        opts.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
+                        opts.ServerCertificate = _certificateHelper.LoadOrGenerateCertificatePfx();
+                        opts.ClientCertificateMode = ClientCertificateMode.NoCertificate;
+                    });
+                }
             });
         });
 
@@ -93,12 +100,15 @@ public class HttpServer(
         }
 
         // Extract header for original IP detection
-        var realIp = context.GetHeaderIfExists("x-real-ip");
-        var clientIp = GetClientIp(context, realIp);
-
-        if (_httpConfig.LogRequests)
+        if (!_environment.IsEnvironment(EnvironmentNames.Testing))
         {
-            LogRequest(context, clientIp, IsLocalRequest(clientIp));
+            var realIp = context.GetHeaderIfExists("x-real-ip");
+            var clientIp = GetClientIp(context, realIp);
+
+            if (_httpConfig.LogRequests)
+            {
+                LogRequest(context, clientIp, IsLocalRequest(clientIp));
+            }
         }
 
         try
