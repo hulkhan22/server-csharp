@@ -119,6 +119,14 @@ public class FileSptLoggerReference : BaseSptLoggerReference
         get;
         set;
     }
+
+    [JsonPropertyName("rollingInterval")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public RollingInterval RollingInterval
+    {
+        get;
+        set;
+    } = RollingInterval.None;
 }
 
 public class ConsoleSptLoggerReference : BaseSptLoggerReference
@@ -142,6 +150,15 @@ public enum SptLoggerFilterType
 {
     Exclude,
     Include
+}
+
+public enum RollingInterval
+{
+    None,
+    Hour,
+    Day,
+    Week,
+    Month
 }
 
 public static class SptLoggerFilterExtensions
