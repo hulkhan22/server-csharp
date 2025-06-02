@@ -4,7 +4,7 @@ public static class RollingIntervalExtensions
 {
     public static DateTime GetCurrentCheckpoint(this RollingInterval interval)
     {
-        var now = DateTime.UtcNow.AddMinutes(93);
+        var now = DateTime.UtcNow;
 
         return interval switch
         {
